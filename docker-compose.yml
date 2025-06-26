@@ -1,0 +1,116 @@
+services:
+  db:
+    image: mysql:8.4.5
+    command:
+      - '--character-set-server=utf8mb4'
+      - '--collation-server=utf8mb4_unicode_ci'
+      - '--default-authentication-plugin=mysql_native_password'
+    volumes:
+      - db_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${WORDPRESS_DB_NAME}"
+      MYSQL_USER: "${WORDPRESS_DB_USER}"
+      MYSQL_PASSWORD: "${WORDPRESS_DB_PASSWORD}"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "${WORDPRESS_DB_USER}", "-p${WORDPRESS_DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - wpdc_network
+
+  wp-setup:
+    # ADDED: This new service runs once to install WordPress
+    image: wordpress:cli-php8.3
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - wp_html:/var/www/html
+      - ./docker/setup/install-wp.sh:/usr/local/bin/install-wp.sh:ro
+    environment:
+      WORDPRESS_DB_HOST: "db:3306"
+      WORDPRESS_DB_NAME: "${WORDPRESS_DB_NAME}"
+      WORDPRESS_DB_USER: "${WORDPRESS_DB_USER}"
+      WORDPRESS_DB_PASSWORD: "${WORDPRESS_DB_PASSWORD}"
+      WP_URL: "${WP_URL}"
+      WP_TITLE: "${WP_TITLE}"
+      WP_ADMIN_USER: "${WP_ADMIN_USER}"
+      WP_ADMIN_PASSWORD: "${WP_ADMIN_PASSWORD}"
+      WP_ADMIN_EMAIL: "${WP_ADMIN_EMAIL}"
+    networks:
+      - wpdc_network
+    entrypoint: [ "install-wp.sh" ]
+    restart: "no"  # Ensures this one-shot container doesn't restart
+
+  wordpress:
+    image: wordpress:6.8.1-php8.3-apache
+    depends_on:
+      wp-setup:
+        condition: service_completed_successfully
+    volumes:
+      - wp_html:/var/www/html
+      - ./wp-content:/var/www/html/wp-content
+      - ./config/wp_php.ini:/usr/local/etc/php/conf.d/uploads.ini
+    environment:
+      WORDPRESS_DB_HOST: "db:3306"
+      WORDPRESS_DB_NAME: "${WORDPRESS_DB_NAME}"
+      WORDPRESS_DB_USER: "${WORDPRESS_DB_USER}"
+      WORDPRESS_DB_PASSWORD: "${WORDPRESS_DB_PASSWORD}"
+      WORDPRESS_TABLE_PREFIX: "wp_"
+    ports:
+      - "${IP_ADDRESS}:${PORT}:80"
+    restart: unless-stopped
+    networks:
+      - wpdc_network
+
+  wpcli:
+    image: wordpress:cli-2.12.0-php8.3
+    depends_on:
+      wp-setup:
+        condition: service_completed_successfully
+    volumes:
+      - wp_html:/var/www/html
+      - ./config/wp_php.ini:/usr/local/etc/php/conf.d/uploads.ini
+      - ./docker/wpcli/entrypoint.sh:/usr/local/bin/docker-wpcli-entrypoint:ro
+    environment:
+      WORDPRESS_DB_HOST: "db:3306"
+      WORDPRESS_DB_NAME: "${WORDPRESS_DB_NAME}"
+      WORDPRESS_DB_USER: "${WORDPRESS_DB_USER}"
+      WORDPRESS_DB_PASSWORD: "${WORDPRESS_DB_PASSWORD}"
+    networks:
+      - wpdc_network
+    entrypoint: [ "docker-wpcli-entrypoint" ]
+    # Command to run via `docker compose run --rm wpcli`
+    command: [ "wp" ]
+
+  phpmyadmin:
+    image: phpmyadmin:5.2.2-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PMA_HOST: "db"
+      PMA_PORT: 3306
+      PMA_USER: "root"
+      PMA_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      UPLOAD_LIMIT: "512M"
+    ports:
+      - "${IP_ADDRESS}:8080:80"
+    restart: unless-stopped
+    networks:
+      - wpdc_network
+
+volumes:
+  db_data:
+    driver: local
+  wp_html:
+    driver: local
+
+networks:
+  wpdc_network:
+    driver: bridge
