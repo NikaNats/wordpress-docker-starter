@@ -1,0 +1,49 @@
+﻿.env
+# Docker Compose override files
+docker-compose.override.yml
+docker-compose.*.yml
+
+# Docker volumes and logs
+docker-data/
+logs/
+
+# WordPress uploads and cache
+wp-content/uploads/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/backups/
+
+# WordPress core files (if downloaded locally)
+wordpress/
+
+# System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# IDE and editor folders
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Node/npm artifacts (if used)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Shell history and OS swap files
+*.swp
+*.swo
+*.bak
+*.tmp
+*.log
+
+# Composer dependencies (if used)
+vendor/
+
+# Export/import scripts output
+export.sql
+import.sql
