@@ -4,7 +4,6 @@ services:
     command:
       - '--character-set-server=utf8mb4'
       - '--collation-server=utf8mb4_unicode_ci'
-      - '--default-authentication-plugin=mysql_native_password'
     volumes:
       - db_data:/var/lib/mysql
     environment:
@@ -31,6 +30,7 @@ services:
     volumes:
       - wp_html:/var/www/html
       - ./docker/setup/install-wp.sh:/usr/local/bin/install-wp.sh:ro
+      - ./config/wp_php.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
     environment:
       WORDPRESS_DB_HOST: "db:3306"
       WORDPRESS_DB_NAME: "${WORDPRESS_DB_NAME}"
@@ -54,7 +54,7 @@ services:
     volumes:
       - wp_html:/var/www/html
       - ./wp-content:/var/www/html/wp-content
-      - ./config/wp_php.ini:/usr/local/etc/php/conf.d/uploads.ini
+      - ./config/wp_php.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
     environment:
       WORDPRESS_DB_HOST: "db:3306"
       WORDPRESS_DB_NAME: "${WORDPRESS_DB_NAME}"
@@ -74,8 +74,8 @@ services:
         condition: service_completed_successfully
     volumes:
       - wp_html:/var/www/html
-      - ./config/wp_php.ini:/usr/local/etc/php/conf.d/uploads.ini
-      - ./docker/wpcli/entrypoint.sh:/usr/local/bin/docker-wpcli-entrypoint:ro
+      - ./config/wp_php.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+      - ./docker/wpcli/entrypoint.sh:/usr/local/bin/docker-wpcli-entrypoint
     environment:
       WORDPRESS_DB_HOST: "db:3306"
       WORDPRESS_DB_NAME: "${WORDPRESS_DB_NAME}"
@@ -83,9 +83,7 @@ services:
       WORDPRESS_DB_PASSWORD: "${WORDPRESS_DB_PASSWORD}"
     networks:
       - wpdc_network
-    entrypoint: [ "docker-wpcli-entrypoint" ]
-    # Command to run via `docker compose run --rm wpcli`
-    command: [ "wp" ]
+    entrypoint: [ "/usr/local/bin/docker-wpcli-entrypoint", "wp" ]
 
   phpmyadmin:
     image: phpmyadmin:5.2.2-apache
@@ -99,6 +97,7 @@ services:
       PMA_PASSWORD: "${DB_ROOT_PASSWORD}"
       MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
       UPLOAD_LIMIT: "512M"
+      PMA_ABSOLUTE_URI: "http://${IP_ADDRESS}:8080/"
     ports:
       - "${IP_ADDRESS}:8080:80"
     restart: unless-stopped
