@@ -1,4 +1,7 @@
 ﻿.env
+# Secrets directory with sensitive data
+secrets/
+
 # Docker Compose override files
 docker-compose.override.yml
 docker-compose.*.yml

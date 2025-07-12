@@ -4,6 +4,24 @@ set -euo pipefail
 readonly WP_CORE_FILE="/var/www/html/wp-load.php"
 readonly MAX_WAIT_TIME=120
 
+# Function for loading secrets
+load_secret() {
+    local secret_name="$1"
+    local secret_file="/run/secrets/$secret_name"
+    local env_var_file="${secret_name^^}_FILE"
+    
+    if [[ -n "${!env_var_file:-}" ]]; then
+        # Environment variable points to a file
+        cat "${!env_var_file}"
+    elif [[ -f "$secret_file" ]]; then
+        # Default secret file location
+        cat "$secret_file"
+    else
+        # Return the environment variable value (fallback)
+        echo "${!secret_name:-}"
+    fi
+}
+
 # Function for logging
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
@@ -24,16 +42,18 @@ fi
 if ! wp core is-installed --allow-root 2>/dev/null; then
     log "WordPress is not installed. Installing now..."
 
+    # Load secrets into variables
+    WORDPRESS_DB_PASSWORD=$(load_secret "db_password")
+    WP_ADMIN_PASSWORD=$(load_secret "wp_admin_password")
+
     # Validate required environment variables
     required_vars=(
         "WORDPRESS_DB_NAME"
         "WORDPRESS_DB_USER" 
-        "WORDPRESS_DB_PASSWORD"
         "WORDPRESS_DB_HOST"
         "WP_URL"
         "WP_TITLE"
         "WP_ADMIN_USER"
-        "WP_ADMIN_PASSWORD"
         "WP_ADMIN_EMAIL"
     )
     
@@ -43,6 +63,17 @@ if ! wp core is-installed --allow-root 2>/dev/null; then
             exit 1
         fi
     done
+
+    # Validate secrets were loaded
+    if [[ -z "$WORDPRESS_DB_PASSWORD" ]]; then
+        log "Error: Failed to load database password from secret."
+        exit 1
+    fi
+    
+    if [[ -z "$WP_ADMIN_PASSWORD" ]]; then
+        log "Error: Failed to load admin password from secret."
+        exit 1
+    fi
 
     # Create wp-config.php if it does not exist
     if [[ ! -f "/var/www/html/wp-config.php" ]]; then
