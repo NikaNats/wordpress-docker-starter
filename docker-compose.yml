@@ -27,6 +27,7 @@ services:
   wp-setup:
     # ADDED: This new service runs once to install WordPress
     image: wordpress:cli-php8.3
+    user: "www-data"
     depends_on:
       db:
         condition: service_healthy
