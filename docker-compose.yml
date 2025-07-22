@@ -117,10 +117,53 @@ services:
     networks:
       - wpdc_network
 
+  sftpgo:
+    image: drakkan/sftpgo:v2.6.2
+    depends_on:
+      wordpress:
+        condition: service_started
+    volumes:
+      - wp_html:/srv/sftpgo/data/wordpress:ro
+      - ./wp-content:/srv/sftpgo/data/wp-content
+      - ./docker/sftpgo/config:/var/lib/sftpgo
+      - ./docker/sftpgo/logs:/var/log/sftpgo
+      - sftpgo_data:/srv/sftpgo/data/home
+    environment:
+      SFTPGO_LOG_LEVEL: "${SFTPGO_LOG_LEVEL:-info}"
+      SFTPGO_CONFIG_FILE: "/var/lib/sftpgo/sftpgo.json"
+      SFTPGO_DEFAULT_ADMIN_USERNAME: "${SFTPGO_DEFAULT_ADMIN_USERNAME:-admin}"
+      SFTPGO_DEFAULT_ADMIN_PASSWORD: "${SFTPGO_DEFAULT_ADMIN_PASSWORD:-changeme_sftpgo_admin}"
+    ports:
+      - "${IP_ADDRESS}:2022:2022"  # SFTP
+      - "${IP_ADDRESS}:8090:8080"  # Web Admin UI
+      - "${IP_ADDRESS}:10080:10080" # WebDAV (optional)
+    restart: unless-stopped
+    networks:
+      - wpdc_network
+    healthcheck:
+      test: ["CMD", "sftpgo", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    user: "1000:1000"
+
 volumes:
   db_data:
     driver: local
   wp_html:
+    driver: local
+  sftpgo_data:
     driver: local
 
 networks:

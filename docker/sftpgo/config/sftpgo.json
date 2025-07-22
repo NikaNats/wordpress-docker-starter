@@ -1,0 +1,17 @@
+{
+  "sftpd": {
+    "bindings": [{"port": 2022, "address": ""}],
+    "banner": "SFTPGo WordPress File Server"
+  },
+  "webdavd": {
+    "bindings": [{"port": 10080, "address": ""}]
+  },
+  "httpd": {
+    "bindings": [{"port": 8080, "address": ""}]
+  },
+  "data_provider": {
+    "driver": "sqlite",
+    "name": "/var/lib/sftpgo/sftpgo.db",
+    "create_default_admin": true
+  }
+}
