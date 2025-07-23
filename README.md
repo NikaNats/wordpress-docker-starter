@@ -364,6 +364,30 @@ wordpress-docker-starter/
 
 
 
+## Troubleshooting
+
+### WordPress FTP Connection Error
+
+**Problem:** When installing themes or plugins, WordPress asks for FTP credentials.
+
+**Solution:** Run this command to fix filesystem permissions:
+```bash
+docker-compose run --rm wpcli config set FS_METHOD 'direct' --type=constant
+```
+
+### Common Issues
+
+**Container startup fails:**
+```bash
+docker-compose logs wordpress
+docker-compose down && docker-compose up -d
+```
+
+**Permission denied errors:**
+```bash
+docker-compose exec wordpress chown -R www-data:www-data /var/www/html/wp-content
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

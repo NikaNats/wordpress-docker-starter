@@ -50,7 +50,12 @@ if ! wp core is-installed --path='/var/www/html' 2>/dev/null; then
             --dbhost="$WORDPRESS_DB_HOST" \
             --skip-check \
             --quiet
-        log "wp-config.php created."
+        
+        # Add filesystem method to bypass FTP requirements
+        log "Adding FS_METHOD constant to wp-config.php..."
+        wp config set FS_METHOD 'direct' --type=constant --quiet
+        
+        log "wp-config.php created with filesystem constants."
     fi
 
     log "Installing WordPress core..."
