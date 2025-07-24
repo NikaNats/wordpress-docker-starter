@@ -27,10 +27,9 @@ A production-ready WordPress development environment using Docker Compose with a
 ✨ **Key Features:**
 
 - 🚀 **One-command setup** - Automated WordPress installation and configuration
-- 🐳 **Multi-service architecture** - WordPress, MySQL, phpMyAdmin, WP-CLI, and SFTPGo
+- 🐳 **Multi-service architecture** - WordPress, MySQL, phpMyAdmin, and WP-CLI
 - 🔒 **Security-first approach** - Environment-based configuration with secure defaults
 - 🛠️ **Development tools** - WP-CLI integration and phpMyAdmin for database management
-- 📁 **Enterprise file transfer** - SFTPGo with SFTP, WebDAV, and web admin interface
 - 📦 **Data persistence** - Persistent volumes for database and WordPress files
 - 🔄 **Import/Export utilities** - Built-in scripts for database backup and restore
 - 🎯 **Production-ready** - Health checks, restart policies, and proper networking
@@ -212,63 +211,6 @@ Password: your_secure_admin_password_here
 ### WordPress Setup (`wp-setup`)
 - **Purpose:** One-time WordPress installation
 - **Features:** Automated core installation and configuration
-
-### SFTPGo (`sftpgo`)
-- **Image:** `drakkan/sftpgo:v2.6.2`
-- **Ports:** `2022` (SFTP), `8090` (Admin UI), `10080` (WebDAV)
-- **Features:** Enterprise file transfer server with multiple protocols
-- **Protocols:** SFTP, SCP, FTP/S, WebDAV
-- **Security:** Advanced user management, virtual folders, audit logging
-
-#### SFTPGo Access Details
-- **SFTP Server:** `sftp://127.0.0.1:2022`
-- **Admin Web UI:** `http://127.0.0.1:8090`
-- **WebDAV Server:** `http://127.0.0.1:10080`
-- **Default Admin:** `admin` / (configured via environment variables)
-
-#### SFTPGo Management
-
-**Initialize SFTPGo (First-time setup):**
-```bash
-# Linux/macOS
-./docker/sftpgo/manage-sftpgo.sh init
-
-# Windows PowerShell
-.\docker\sftpgo\manage-sftpgo.ps1 init
-```
-
-**User Management:**
-```bash
-# Create a new SFTP user
-./docker/sftpgo/manage-sftpgo.sh create-user developer mypassword123
-
-# List all users
-./docker/sftpgo/manage-sftpgo.sh list-users
-
-# Delete a user
-./docker/sftpgo/manage-sftpgo.sh delete-user developer
-
-# Check service status
-./docker/sftpgo/manage-sftpgo.sh status
-```
-
-**Configuration Backup:**
-```bash
-# Create backup
-./docker/sftpgo/manage-sftpgo.sh backup sftpgo-backup.json
-
-# Restore backup
-./docker/sftpgo/manage-sftpgo.sh restore sftpgo-backup.json
-```
-
-#### SFTPGo Features
-- ✅ **Multi-protocol support:** SFTP, SCP, FTP/S, WebDAV
-- ✅ **Web Admin Interface:** User-friendly management UI
-- ✅ **Virtual Folders:** Flexible file system mapping
-- ✅ **Advanced Security:** Rate limiting, IP filtering, MFA support
-- ✅ **Audit Logging:** Comprehensive activity tracking
-- ✅ **REST API:** Programmatic management
-- ✅ **High Performance:** Built for enterprise workloads
 
 ## Database Management
 
