@@ -1,0 +1,46 @@
+# Git files
+.git
+.gitignore
+.github
+
+# Documentation
+*.md
+README*
+CHANGELOG*
+LICENSE*
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Backup files
+backups/
+*.backup
+*.bak
+
+# Node modules (if any)
+node_modules/
+npm-debug.log
+
+# Environment files (should be mounted)
+.env*
+
+# Cache directories
+wp-content/cache/
+wp-content/upgrade/
+wp-content/upgrade-temp-backup/
+
+# WordPress content
+wp-content/

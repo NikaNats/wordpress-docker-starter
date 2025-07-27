@@ -1,52 +1,276 @@
-﻿.env
-# Secrets directory with sensitive data
+﻿# ==========================================
+# WordPress Docker Starter - .gitignore
+# ==========================================
+
+# Environment Configuration
+.env
+.env.local
+.env.production
+.env.staging
+
+# Secrets Directory (contains sensitive passwords)
 secrets/
+secrets/*.txt
+
+# SSL Certificates (contains private keys)
+config/ssl/*.key
+config/ssl/*.pem
+config/ssl/*.crt
+config/ssl/*.p12
+config/ssl/*.pfx
+
+# ==========================================
+# Docker & Container Files
+# ==========================================
 
 # Docker Compose override files
 docker-compose.override.yml
-docker-compose.*.yml
+docker-compose.*.local.yml
 
-# Docker volumes and logs
+# Docker volumes and persistent data
 docker-data/
-logs/
+volumes/
+data/
 
-# WordPress uploads and cache
+# Docker logs and runtime files
+logs/
+*.log
+docker/*.log
+
+# Container build contexts
+.dockerignore.local
+
+# ==========================================
+# WordPress Files
+# ==========================================
+
+# WordPress uploads and media
 wp-content/uploads/
 wp-content/cache/
 wp-content/upgrade/
+wp-content/upgrade-temp-backup/
 wp-content/backups/
+wp-content/ai1wm-backups/
+wp-content/updraft/
 
 # WordPress core files (if downloaded locally)
 wordpress/
+wp-admin/
+wp-includes/
+*.php.bak
 
-# System files
-.DS_Store
-Thumbs.db
-ehthumbs.db
-desktop.ini
+# WordPress config backups
+wp-config-backup.php
+wp-config.php.bak
 
-# IDE and editor folders
-.idea/
-.vscode/
-*.sublime-workspace
-*.sublime-project
+# Plugin and theme temporary files
+wp-content/plugins/*/cache/
+wp-content/plugins/*/logs/
+wp-content/themes/*/cache/
+wp-content/themes/*/logs/
 
-# Node/npm artifacts (if used)
+# WordPress debug and error logs
+wp-content/debug.log
+wp-content/error_log
+error_log
+debug.log
+
+# ==========================================
+# Database & Backup Files
+# ==========================================
+
+# Database exports and backups
+*.sql
+*.sql.gz
+*.sql.zip
+backups/
+backup-*.sql
+export.sql
+import.sql
+dump.sql
+database-backup-*.sql
+
+# Database connection files
+.my.cnf
+my.cnf.local
+
+# ==========================================
+# Development & Build Tools
+# ==========================================
+
+# Node.js and npm
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json.bak
+yarn.lock.bak
 
-# Shell history and OS swap files
+# Composer (PHP dependencies)
+vendor/
+composer.lock.bak
+
+# Build artifacts
+dist/
+build/
+.cache/
+.temp/
+
+# ==========================================
+# IDE and Editor Files
+# ==========================================
+
+# JetBrains IDEs (PhpStorm, WebStorm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Vim/Neovim
 *.swp
 *.swo
-*.bak
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ==========================================
+# Operating System Files
+# ==========================================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+Icon?
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ==========================================
+# Security & Sensitive Data
+# ==========================================
+
+# SSH keys and certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+
+# Security reports and audit files
+SECURITY_REPORT.md
+security-audit-*.md
+vulnerability-scan-*.txt
+
+# API keys and tokens
+.env.keys
+api-keys.txt
+tokens.txt
+
+# Password files
+passwords.txt
+credentials.txt
+auth.txt
+
+# ==========================================
+# Temporary & Runtime Files
+# ==========================================
+
+# General temporary files
 *.tmp
-*.log
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+*.patch
 
-# Composer dependencies (if used)
-vendor/
+# Runtime files
+*.pid
+*.seed
+*.pid.lock
 
-# Export/import scripts output
-export.sql
-import.sql
+# Test coverage and reports
+coverage/
+.nyc_output/
+test-results/
+junit.xml
+
+# ==========================================
+# Deployment & Production Files
+# ==========================================
+
+# Deployment scripts output
+deployment-*.log
+deploy.log
+production-deploy.log
+
+# Let's Encrypt certificates (if stored locally)
+letsencrypt/
+certbot/
+
+# Monitoring and logging
+monitoring/
+grafana-data/
+prometheus-data/
+
+# ==========================================
+# Project Specific Exclusions
+# ==========================================
+
+# Generated documentation
+docs/build/
+site/
+
+# Custom build outputs
+custom-builds/
+releases/
+
+# Performance testing results
+performance-tests/
+load-test-results/
+
+# Final test and verification reports (keep in repo for documentation)
+# COMPREHENSIVE_TEST_RESULTS.md - keeping this for documentation
+# FINAL_MAXIMALLY_ACCURATE_VERIFICATION.md - keeping this for documentation

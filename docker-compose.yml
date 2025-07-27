@@ -108,11 +108,11 @@ services:
       PMA_PASSWORD_FILE: /run/secrets/db_root_password
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
       UPLOAD_LIMIT: "512M"
-      PMA_ABSOLUTE_URI: "http://${IP_ADDRESS}:8080/"
+      PMA_ABSOLUTE_URI: "http://${IP_ADDRESS}:8090/"
     secrets:
       - db_root_password
     ports:
-      - "${IP_ADDRESS}:8080:80"
+      - "${IP_ADDRESS}:9001:80"
     restart: unless-stopped
     networks:
       - wpdc_network

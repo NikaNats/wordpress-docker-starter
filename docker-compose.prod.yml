@@ -1,0 +1,311 @@
+﻿# Production WordPress Docker Compose Configuration
+# Security-hardened with HTTPS, resource limits, and monitoring
+
+services:
+  # Reverse Proxy with SSL Termination
+  nginx:
+    image: nginx:1.25.3-alpine
+    container_name: wp_nginx_prod
+    restart: unless-stopped
+    ports:
+      - "${IP_ADDRESS}:80:80"
+      - "${IP_ADDRESS}:443:443"
+    volumes:
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./config/ssl:/etc/nginx/ssl:ro
+      - wp_html:/var/www/html:ro
+    depends_on:
+      - wordpress
+    networks:
+      - wpdc_network
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:rw,noexec,nosuid,size=50m
+      - /var/run:rw,noexec,nosuid,size=50m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # MySQL Database with security hardening
+  db:
+    image: mysql:8.4.5
+    container_name: wp_db_prod
+    command:
+      - '--character-set-server=utf8mb4'
+      - '--collation-server=utf8mb4_unicode_ci'
+      - '--innodb-buffer-pool-size=256M'
+      - '--max-connections=100'
+      - '--sql-mode=STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO'
+      - '--disable-log-bin'
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./config/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MYSQL_DATABASE: "${WORDPRESS_DB_NAME}"
+      MYSQL_USER: "${WORDPRESS_DB_USER}"
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_root_password
+      - db_password
+    restart: unless-stopped
+    networks:
+      - wpdc_network
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # WordPress Setup Service
+  wp-setup:
+    image: wordpress:cli-php8.3
+    container_name: wp_setup_prod
+    user: "www-data"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - wp_html:/var/www/html
+      - ./docker/setup/install-wp.sh:/usr/local/bin/install-wp.sh:ro
+      - ./config/wp_php.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+    environment:
+      WORDPRESS_DB_HOST: "db:3306"
+      WORDPRESS_DB_NAME: "${WORDPRESS_DB_NAME}"
+      WORDPRESS_DB_USER: "${WORDPRESS_DB_USER}"
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
+      WP_URL: "${WP_URL}"
+      WP_TITLE: "${WP_TITLE}"
+      WP_ADMIN_USER: "${WP_ADMIN_USER}"
+      WP_ADMIN_PASSWORD_FILE: /run/secrets/wp_admin_password
+      WP_ADMIN_EMAIL: "${WP_ADMIN_EMAIL}"
+    secrets:
+      - db_password
+      - wp_admin_password
+    networks:
+      - wpdc_network
+    entrypoint: ["install-wp.sh"]
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+
+  # WordPress Application with security hardening
+  wordpress:
+    image: wordpress:6.8.1-php8.3-apache
+    container_name: wp_app_prod
+    ports:
+      - "8080:80"  # For local development
+    depends_on:
+      wp-setup:
+        condition: service_completed_successfully
+    volumes:
+      - wp_html:/var/www/html
+      - ./wp-content:/var/www/html/wp-content
+      - ./config/wp_php.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+      - ./config/wordpress/wp-config-production.php:/usr/local/bin/wp-config-production.php:ro
+      - ./config/apache/apache.conf:/etc/apache2/conf-available/wordpress.conf:ro
+    command: >
+      sh -c "a2enconf wordpress && apache2-foreground"
+    environment:
+      WORDPRESS_DB_HOST: "db:3306"
+      WORDPRESS_DB_NAME: "${WORDPRESS_DB_NAME}"
+      WORDPRESS_DB_USER: "${WORDPRESS_DB_USER}"
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
+      WORDPRESS_TABLE_PREFIX: "wp_"
+      WORDPRESS_CONFIG_EXTRA: |
+        /* Production Security Hardening */
+        define('WP_DEBUG', false);
+        define('WP_DEBUG_LOG', false);
+        define('WP_DEBUG_DISPLAY', false);
+        define('DISALLOW_FILE_EDIT', true);
+        define('DISALLOW_FILE_MODS', true);
+        define('FORCE_SSL_ADMIN', true);
+        define('WP_CACHE', true);
+        define('COMPRESS_CSS', true);
+        define('COMPRESS_SCRIPTS', true);
+        define('ENFORCE_GZIP', true);
+        define('WP_POST_REVISIONS', 3);
+        define('AUTOSAVE_INTERVAL', 300);
+        define('WP_CRON_LOCK_TIMEOUT', 120);
+        
+        /* Security Headers */
+        ini_set('session.cookie_httponly', 1);
+        ini_set('session.cookie_secure', 1);
+        ini_set('session.use_only_cookies', 1);
+        
+        /* Hide WordPress Version */
+        remove_action('wp_head', 'wp_generator');
+    secrets:
+      - db_password
+    restart: unless-stopped
+    networks:
+      - wpdc_network
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.0'
+        reservations:
+          memory: 512M
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/wp-admin/install.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # WP-CLI for maintenance
+  wpcli:
+    image: wordpress:cli-2.12.0-php8.3
+    container_name: wp_cli_prod
+    depends_on:
+      wp-setup:
+        condition: service_completed_successfully
+    volumes:
+      - wp_html:/var/www/html
+      - ./config/wp_php.ini:/usr/local/etc/php/conf.d/uploads.ini:ro
+      - ./docker/wpcli/entrypoint.sh:/usr/local/bin/docker-wpcli-entrypoint
+    environment:
+      WORDPRESS_DB_HOST: "db:3306"
+      WORDPRESS_DB_NAME: "${WORDPRESS_DB_NAME}"
+      WORDPRESS_DB_USER: "${WORDPRESS_DB_USER}"
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    networks:
+      - wpdc_network
+    entrypoint: ["/usr/local/bin/docker-wpcli-entrypoint", "wp"]
+    security_opt:
+      - no-new-privileges:true
+
+  # phpMyAdmin (DISABLED for production security)
+  # Uncomment only for maintenance and secure with VPN/bastion host
+  # phpmyadmin:
+  #   image: phpmyadmin:5.2.2-apache
+  #   container_name: wp_pma_prod
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   environment:
+  #     PMA_HOST: "db"
+  #     PMA_PORT: 3306
+  #     PMA_USER: "root"
+  #     PMA_PASSWORD_FILE: /run/secrets/db_root_password
+  #     MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+  #     UPLOAD_LIMIT: "128M"
+  #     PMA_ABSOLUTE_URI: "https://${SSL_DOMAIN}/pma/"
+  #     PMA_QUERYHISTORYDB: false
+  #     PMA_QUERYHISTORYMAX: 0
+  #   secrets:
+  #     - db_root_password
+  #   ports:
+  #     - "127.0.0.1:8080:80"  # Localhost only when enabled
+  #   restart: unless-stopped
+  #   networks:
+  #     - wpdc_network
+  #   security_opt:
+  #     - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+
+  # Redis Cache for WordPress
+  redis:
+    image: redis:7.2.3-alpine
+    container_name: wp_redis_prod
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD:-default_redis_pass}"
+    volumes:
+      - redis_data:/data
+    networks:
+      - wpdc_network
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backup Service
+  backup:
+    image: alpine:3.19
+    container_name: wp_backup_prod
+    depends_on:
+      - db
+      - wordpress
+    volumes:
+      - wp_html:/var/www/html:ro
+      - ./backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    environment:
+      BACKUP_RETENTION_DAYS: 30
+      MYSQL_HOST: "db"
+      MYSQL_DATABASE: "${WORDPRESS_DB_NAME}"
+      MYSQL_USER: "root"
+      MYSQL_PASSWORD_FILE: /run/secrets/db_root_password
+    secrets:
+      - db_root_password
+    networks:
+      - wpdc_network
+    entrypoint: ["sh", "-c", "while true; do sleep 86400; /usr/local/bin/backup.sh; done"]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+# Volumes with better organization
+volumes:
+  db_data:
+    driver: local
+    name: wp_db_prod_data
+  wp_html:
+    driver: local
+    name: wp_html_prod_data
+  redis_data:
+    driver: local
+    name: wp_redis_prod_data
+
+# Secure network configuration
+networks:
+  wpdc_network:
+    driver: bridge
+    name: wp_prod_network
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+# Docker secrets configuration
+secrets:
+  db_root_password:
+    file: ./secrets/db_root_password.txt
+  db_password:
+    file: ./secrets/db_password.txt
+  wp_admin_password:
+    file: ./secrets/wp_admin_password.txt
